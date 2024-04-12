@@ -1,0 +1,96 @@
+
+视觉惯性里程计算法
+
+功能介绍
+
+视觉惯性里程计（Visual Inertial Odometry，VIO）是融合相机与惯性测量单元（Inertial Measurement Unit，IMU）数据实现机器人定位的算法。VIO定位算法具有成本低、适用环境广等优点，在室外环境下能够有效弥补卫星定位中遮挡、多路径干扰等失效场景。优秀、鲁棒的VIO算法是实现室外高精度导航定位的关键。
+
+代码仓库：https://github.com/HorizonRDK/hobot_vio.git
+
+支持平台
+
+| 平台   | 运行方式     | 示例功能                                                     |
+| ------ | ------------ | ------------------------------------------------------------ |
+| RDK X3, RDK X3 Module, RDK Ultra | Ubuntu 20.04 | 使用realsense的图像和IMU数据作为算法输入，算法输出机器人运动轨迹，轨迹可在PC的rviz2上可视化 |
+
+准备工作
+
+
+RDK已烧录好地平线提供的Ubuntu 20.04系统镜像。
+RDK已成功安装TogetheROS.Bot和Realsense的ROS2 Package。
+realsense相机，连接到RDK的USB 3.0接口。
+确认PC机能够通过网络访问RDK。
+
+
+使用介绍
+
+算法订阅realsense相机的图像和IMU数据作为算法的输入，经过计算得到相机的轨迹信息，并通过ROS2的话题机制发布相机的运动轨迹，轨迹结果可在PC的rviz2软件查看。算法的输入和输出topic如下表所示：
+
+输入topic
+
+| 参数名      | 类型        | 解释                                                         | 是否必须 | 默认值                                             |
+| ----------- | ----------- | ------------------------------------------------------------ | -------- | -------------------------------------------------- |
+| pathconfig | std::string | vio算法配置文件路径                                          | 是       | /opt/tros/lib/hobotvio/config/realsenseD435i.yaml |
+| imagetopic | std::string | vio算法订阅的图像数据话题名                                  | 是       | /camera/infra1/imagerectraw                      |
+| imutopic   | std::string | vio算法订阅的IMU数据话题名                                   | 是       | /camera/imu                                        |
+| sample_gap  | std::string | vio算法处理频率，1表示每帧图像都会参与轨迹计算，2表示每两帧图像计算一次，依此类推 | 是       | 2                                                  |
+
+输出topic
+
+| topic名                      | 类型                | 解释                        |
+| ---------------------------- | ------------------- | --------------------------- |
+| horizonvio/horizonviopath | navmsgs::msg::Path | vio算法输出的机器人运动轨迹 |
+
+启动命令：
+
+shell
+
+配置tros.b环境
+
+source /opt/tros/setup.bash
+
+ros2 launch hobotvio hobotvio.launch.py 
+
+
+结果分析
+
+在X3上启动算法示例后在运行终端输出如下信息，首先启动realsense节点发布图像和IMU数据，随后算法进入初始化流程，此时等待用户平移相机完成初始化，初始化完成后算法开始输出定位坐标：
+
+text
+[hobot_vio-1] T_CtoI:
+[hobot_vio-1]    0.999934   0.0103587   0.0049969   0.0270761
+[hobot_vio-1]  -0.0104067    0.999899  0.00967935 -0.00272628
+[hobot_vio-1] -0.00489613 -0.00973072    0.999941  -0.0518149
+[hobot_vio-1]           0           0           0           1
+[hobot_vio-1] system use_rtk_: 0
+[hobot_vio-1] [static initializer] not enough imu readings
+[hobot_vio-1] [static initializer] not enough imu readings
+[hobot_vio-1] [static initializer] IMU belows th 0.011508, 0.00274453 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.0105996, 0.00273085 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.00964632, 0.00280866 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.00892132, 0.00279346 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.00816016, 0.00281761 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.00776753, 0.00277049 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.00744219, 0.00274874 &lt; 0.5, 0
+[hobot_vio-1] [static initializer] IMU belows th 0.420251, 0.36058 &lt; 0.5, 0
+[hobot_vio-1] HorizonVIO Successfully initialized!
+[hobot_vio-1] SLAM feats: 0
+[hobot_vio-1] KF feats: 338
+[hobot_vio-1] 132.853 ms all consumed
+[hobot_vio-1] travel(m): 0.000
+[hobot_vio-1] SLAM feats: 0
+[hobot_vio-1] KF feats: 31
+[hobot_vio-1] 142.996 ms all consumed
+[hobot_vio-1] travel(m): 0.014
+[hobot_vio-1] SLAM feats: 0
+[hobot_vio-1] KF feats: 26
+[hobot_vio-1] 96.911 ms all consumed
+[hobot_vio-1] travel(m): 0.025
+[hobot_vio-1] SLAM feats: 0
+[hobot_vio-1] KF feats: 23
+[hobot_vio-1] 52.470 ms all consumed
+[hobot_vio-1] travel(m): 0.034
+[hobot_vio-1] SLAM feats: 0
+[hobot_vio-1] KF feats: 33
+[hobot_vio-1] 47.407 ms all consumed
+[hobot_vio-1] travel(m): 0.042

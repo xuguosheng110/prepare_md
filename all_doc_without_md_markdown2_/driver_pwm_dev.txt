@@ -1,0 +1,147 @@
+
+PWM 驱动调试指南
+
+X3有两类控制器：一类是标准PWM，有3组，每组三个，共9个，另一类是LPWM，主要用于支持Sensor的同步曝光。
+
+
+PWM 默认支持频率范围是192MHz到46.8KHz，每组PWM的占空比寄存器RATIO精度为8bit。
+LPWM 默认支持频率范围是100KHz到24.4Hz，没有占空比寄存器，只有一个高电平持续时间HIGH，HIGH寄存器配置单位是us，最大支持设置高电平为160us，所以LPWM的占空比与频率有关。
+LPWM是为了Sensor 同步设计的，不是一个通用的PWM，单纯PWM功能建议使用PWM。
+
+
+驱动代码
+
+代码路径
+
+c
+drivers/pwm/pwm-hobot.c
+
+
+内核配置
+
+bash
+Device Drivers
+    -&gt;  Pulse-Width Modulation (PWM) Support
+        -&gt;  Hobot PWM controller support
+        -&gt;  Hobot lite PWM controller support
+
+
+DTS节点配置
+
+在hobot-xj3.dtsi这个文件里面有pwm和lpwm的配置，一般来讲不需要做任何修改。
+
+c
+/* arch/arm64/boot/dts/hobot/hobot-xj3.dtsi */
+lpwm: lpwm@0xA500D000 {
+    compatible = "hobot,hobot-lpwm";
+    reg = &lt;0 0xA5018000 0 0x1000>;
+    interrupt-parent = &lt;&amp;gic>;
+    interrupts = &lt;0 68 4>;
+    pinctrl-names = "lpwm0", "lpwm1","lpwm2","lpwm3", "lpwmpps";
+    pinctrl-0 = &lt;&amp;lpwm0_func>;
+    pinctrl-1 = &lt;&amp;lpwm1_func>;
+    pinctrl-2 = &lt;&amp;lpwm2_func>;
+    pinctrl-3 = &lt;&amp;lpwm3_func>;
+    pinctrl-4 = &lt;&amp;lpwm_pps>;
+    clocks = &lt;&amp;lpwm_mclk>;
+    clock-names = "lpwmmclk";
+    status = "disabled";
+};
+
+pwmc0: pwm@0xA500D000 {
+    compatible = "hobot,hobot-pwm";
+    #pwm-cells = &lt;3>;
+    reg = &lt;0 0xA500D000 0 0x1000>;
+    interrupt-parent = &lt;&amp;gic>;
+    interrupts = &lt;0 44 4>;
+    pinctrl-names = "pwm0", "pwm1","pwm2";
+    pinctrl-0 = &lt;&amp;pwm0_func>;
+    pinctrl-1 = &lt;&amp;pwm1_func>;
+    pinctrl-2 = &lt;&amp;pwm2_func>;
+    clocks = &lt;&amp;pwm0_mclk>;
+    clock-names = "pwmmclk";
+    status = "disabled";
+};
+...
+
+
+当需要使能对应串口的时候，可以到对应的板级文件修改，这里以hobot-x3-sdb_v4.dts为例，使能pwm0-2、pwm3-5。
+
+c
+/* arch/arm64/boot/dts/hobot/hobot-x3-sdb_v4.dts */
+...
+&amp;pwm_c0 {
+    status = "okay";
+    pinctrl-0 = &lt;&amp;pwm0_func&gt;;
+    pinctrl-1 = &lt;&gt;;
+    pinctrl-2 = &lt;&gt;;
+};
+&amp;pwm_c1 {
+    status = "okay";
+    pinctrl-0 = &lt;&gt;;
+    pinctrl-1 = &lt;&amp;pwm4_func&gt;;
+    pinctrl-2 = &lt;&gt;;
+};
+...
+
+
+测试
+
+用户可以使用如下脚本进行pwm功能测试，并进行信号测量，验证pwm工作是否正常。
+
+shell
+echo 8 8 8 8  &gt; /proc/sys/kernel/printk
+for i in 0 3
+do
+        cd /sys/class/pwm/pwmchip${i}
+        echo 0 &gt; export
+        echo 1 &gt; export
+        echo 2 &gt; export
+
+    cd pwm0
+    echo 10000 &gt; period
+    echo 3000  &gt; duty_cycle
+    echo 1 &gt; enable
+
+    cd ../pwm1
+    echo 10000 &gt; period
+    echo 1000  &gt; duty_cycle
+    echo 1 &gt; enable
+
+    cd ../pwm2
+    echo 10000 &gt; period
+    echo 1000  &gt; duty_cycle
+    echo 1 &gt; enable
+
+
+done
+
+以下是进行寄存器读取
+
+echo "pwm0 pinctrl:devmem 0xa6004010 32"
+echo "pwm1 pinctrl:devmem 0xa6004058 32"
+echo "pwm2 pinctrl:devmem 0xa600405C 32"
+echo "pwm3 pinctrl:devmem 0xa6004060 32"
+echo "pwm4 pinctrl:devmem 0xa6004064 32"
+echo "pwm5 pinctrl:devmem 0xa6004048 32"
+echo "pwm6 pinctrl:devmem 0xa600404C 32"
+echo "pwm7 pinctrl:devmem 0xa6004030 32"
+echo "pwm8 pinctrl:devmem 0xa6004034 32"
+
+echo "Regs of PWM 0 1 2:"
+echo "PWMEN      devmem 0xA500d000 32"
+echo "PWMSLICE   devmem 0xA500d004 32"
+echo "PWMFREQ    devmem 0xA500d008 32"
+echo "PWMFREQ1   devmem 0xA500d00C 32"
+echo "PWMRATIO   devmem 0xA500d014 32"
+echo "PWMSRCPND  devmem 0xA500d01C 32"
+echo "PWM_INTMASK devmem 0xA500d020 32"
+
+echo "Regs of PWM 3 4 5:"
+echo "PWMEN      devmem 0xA500e000 32"
+echo "PWMSLICE   devmem 0xA500e004 32"
+echo "PWMFREQ    devmem 0xA500e008 32"
+echo "PWMFREQ1   devmem 0xA500e00C 32"
+echo "PWMRATIO   devmem 0xA500e014 32"
+echo "PWMSRCPND  devmem 0xA500e01C 32"
+echo "PWM_INTMASK devmem 0xA500e020 32"

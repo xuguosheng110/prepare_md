@@ -1,0 +1,98 @@
+
+2.9 大语言模型
+
+功能介绍
+
+本章节介如何在地平线RDK平台体验端侧Large Language Model (LLM)。
+
+代码仓库：https://github.com/HorizonRDK/hobot_llm.git
+
+支持平台
+
+| 平台                            | 运行方式     | 示例功能           |
+| ------------------------------- | ------------ | ------------------ |
+| RDK X3, RDK X3 Module (4GB内存) | Ubuntu 20.04 | 端侧大语言模型体验 |
+
+注意：仅支持RDK X3，RDK X3 Module 4GB内存版本。
+
+准备工作
+
+地平线RDK平台
+
+
+地平线RDK为4GB内存版本
+地平线RDK已烧录好地平线提供的Ubuntu 20.04系统镜像。
+地平线RDK已成功安装TogetheROS.Bot。
+安装transformers，命令为 pip3 install transformers -i https://pypi.tuna.tsinghua.edu.cn/simple。
+更新hobot-dnn，命令为 sudo apt update; sudo apt install hobot-dnn。
+
+
+使用方式
+
+地平线RDK平台
+
+运行程序前，需要下载模型文件并解压，命令如下：
+
+bash
+
+下载模型文件
+
+wget http://sunrise.horizon.cc/llm-model/llm_model.tar.gz
+
+解压
+
+sudo tar -xf llmmodel.tar.gz -C /opt/tros/lib/hobotllm/
+
+
+使用命令srpi-config修改ION memory大小为1.7GB，设置方法参考RDK用户手册配置工具srpi-config使用指南Performance Options章节。
+
+重启后设置CPU最高频率为1.5GHz，以及调度模式为performance，命令如下：
+
+bash
+sudo bash -c 'echo 1 &gt; /sys/devices/system/cpu/cpufreq/boost'
+sudo bash -c 'echo performance &gt; /sys/devices/system/cpu/cpufreq/policy0/scaling_governor'
+
+
+目前提供两种体验方式，一种直接终端输入文本聊天体验，一种订阅文本消息，然后将结果以文本方式发布出去。
+
+终端交互体验
+
+bash
+source /opt/tros/setup.bash
+
+ros2 run hobotllm hobotllm_chat
+
+
+程序启动后，可直接在当前终端和机器人聊天。
+
+订阅发布体验
+
+
+启动 hobot_llm
+
+bash
+source /opt/tros/setup.bash
+
+ros2 run hobotllm hobotllm
+
+新开一个终端订阅输出结果topic
+
+bash
+source /opt/tros/setup.bash
+
+ros2 topic echo /text_result
+
+新开一个终端发布消息
+
+bash
+source /opt/tros/setup.bash
+
+ros2 topic pub --once /textquery stdmsgs/msg/String "{data: ""中国的首都是哪里""}"
+
+
+
+消息发送后，可以在订阅输出结果终端查看输出结果。
+
+注意事项
+
+确认开发板内存为4GB，同时修改ION memory大小为1.7GB，否则会导致模型加载失败。

@@ -1,0 +1,5 @@
+5.4 模型推理接口说明
+
+tip 小技巧
+
+模型推理API接口所用的头文件和lib库文件，请在 《交付物说明》的 package/host/hostpackage/xj3aarch64/dnn文件夹获取。 

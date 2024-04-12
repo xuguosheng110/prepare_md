@@ -1,0 +1,21 @@
+
+UART压力测试
+
+测试方法
+
+
+镜像要打开uart1和uart2节点（双发双收），硬件上将uart1的TX、RX与uart2的RX、TX短接。
+执行测试脚本：sh uart1test.sh &amp;、sh uart2test.sh &amp;。
+
+
+测试标准
+
+
+高温：45°、低温：-10°、常温下，程序正常执行，不会出现重启挂死的情况。
+LOG中没有fail、error、timeout等异常打印。
+能稳定运行48小时。
+
+
+附录
+
+测试源码以及编译可以参考[UART驱动调试指南](

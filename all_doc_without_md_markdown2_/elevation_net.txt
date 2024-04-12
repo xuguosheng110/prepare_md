@@ -1,0 +1,90 @@
+
+单目高程网络检测
+
+功能介绍
+
+elevationnet是基于hobotdnn package开发的高程网络检测算法示例，在地平线的地平线RDK上使用高程网络模型和室内数据利用BPU进行模型推理，从而得到算法推理结果。
+
+代码仓库：https://github.com/HorizonRDK/elevation_net
+
+应用场景：单目高程网络检测算法通过解析图片得到像素点的深度和高度信息，主要应用于自动驾驶、智能家居、智能交通等领域。
+
+支持平台
+
+| 平台                  | 运行方式     | 示例功能                               |
+| --------------------- | ------------ | -------------------------------------- |
+| RDK X3, RDK X3 Module | Ubuntu 20.04 | · 启动本地回灌，推理渲染结果保存在本地 |
+| X86                   | Ubuntu 20.04 | · 启动本地回灌，推理渲染结果保存在本地 |
+
+准备工作
+
+地平线RDK平台
+
+
+地平线RDK已烧录好地平线提供的Ubuntu 20.04系统镜像。
+地平线RDK已成功安装TogetheROS.Bot。
+
+
+X86平台
+
+
+X86环境已配置Ubuntu 20.04系统镜像。
+X86环境已成功安装tros.b。
+
+
+使用介绍
+
+单目高程网络检测算法示例package采用读取本地图片的形式，经过算法推理后检测出Image基于像素的深度和高度信息，同时package将深度和高度信息进行处理，发布PointCloud2话题数据，用户可以订阅PointCloud2数据用于应用开发。
+
+地平线RDK平台
+
+shell
+
+配置ROS2环境
+
+source /opt/tros/setup.bash
+
+从tros.b的安装路径中拷贝出运行示例需要的配置文件。
+
+cp -r /opt/tros/lib/elevation_net/config/ .
+
+启动launch文件
+
+ros2 launch elevationnet elevationnet.launch.py
+
+
+X86平台
+
+shell
+
+配置ROS2环境
+
+source /opt/tros/setup.bash
+
+从tros.b的安装路径中拷贝出运行示例需要的配置文件。
+
+cp -r /opt/tros/lib/elevation_net/config/ .
+
+启动launch文件
+
+ros2 launch elevationnet elevationnet.launch.py
+
+
+结果分析
+
+package在运行终端推理输出如下信息：
+
+shell
+[16:15:17:520]root@ubuntu:/userdata# ros2 run elevation_net elevation_net
+[16:15:19:056]config_file_path_:./config
+[16:15:19:056] model_file_name_: ./config/elevation.hbm
+[16:15:19:058]feed_image:./config/images/charging_base.png
+[16:15:19:058][BPU_PLAT]BPU Platform Version(1.3.1)!
+[16:15:19:095][HBRT] set log level as 0. version = 3.13.27
+[16:15:19:095][DNN] Runtime version = 1.8.4_(3.13.27 HBRT)
+[16:15:19:133][000:000] (model.cpp:244): Empty desc, model name: elevation, input branch:0, input name:inputquanti-_output
+[16:15:19:133][000:000] (model.cpp:244): Empty desc, model name: elevation, input branch:1, input name:inputquanti2-_output
+[16:15:19:134][000:000] (model.cpp:313): Empty desc, model name: elevation, output branch:0, output name:output_block1quanticonvolution0_conv_output
+
+
+log显示，读取本地图片推理之后输出image基于像素的深度和高度信息。

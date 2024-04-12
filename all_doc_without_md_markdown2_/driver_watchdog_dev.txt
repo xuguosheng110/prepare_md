@@ -1,0 +1,243 @@
+
+看门狗驱动调试指南
+
+代码路径
+
+
+drivers/watchdog/hobot_wdt.c # watchdog 驱动代码源文件
+include/linux/watchdog.h # watchdog 驱动代码头文件
+
+
+dts配置
+
+
+/* arch/arm64/boot/dts/hobot/hobot-xj3.dtsi */
+watchdog: watchdog@0xA1002000 {
+    compatible = "hobot,hobot-wdt";
+    reg = &lt;0 0xA1002000 0 0x1000>;
+    clocks = &lt;&amp;timer0_mclk>;
+    clock-names = "watchdog_mclk";
+    interrupt-parent = &lt;&amp;gic>;
+    interrupts = &lt;0 15 4>;
+    pet-time = &lt;6>;
+    bark-time = &lt;11>;
+    bite-time = &lt;15>;
+    status = "disabled";
+};
+
+/* arch/arm64/boot/dts/hobot/hobot-x3-sdb.dts */
+&amp;watchdog {
+    status = "okay";
+};
+
+/* arch/arm64/boot/dts/hobot/hobot-xj3-xvb.dtsi */
+&amp;watchdog {
+    status = "okay";
+};
+
+
+
+内核配置
+
+
+/* arch/arm64/configs/xj3debugdefconfig */
+CONFIGWATCHDOG=y
+CONFIGWATCHDOG_CORE=y
+
+CONFIGWATCHDOGNOWAYOUT is not set
+
+CONFIGWATCHDOGHANDLEBOOTENABLED=y
+
+CONFIGWATCHDOGSYSFS is not set
+
+#
+
+Watchdog Device Drivers
+
+#
+
+CONFIGSOFTWATCHDOG is not set
+
+CONFIGGPIOWATCHDOG is not set
+
+CONFIGXILINXWATCHDOG is not set
+
+CONFIGZIIRAVEWATCHDOG is not set
+
+CONFIGARMSP805_WATCHDOG is not set
+
+CONFIGARMSBSA_WATCHDOG is not set
+
+CONFIGCADENCEWATCHDOG is not set
+
+CONFIGDWWATCHDOG is not set
+
+CONFIGMAX63XXWATCHDOG is not set
+
+CONFIGHOBOTWATCHDOG=y
+
+CONFIGHOBOTWATCHDOG_ENABLE is not set/打开这个选项系统会自动喂狗/
+
+CONFIGHOBOTWATCHDOG_TEST=y
+
+CONFIGMENA21_WDT is not set
+
+/* arch/arm64/configs/xj3debugdefconfig */
+CONFIGWATCHDOG=y
+CONFIGWATCHDOG_CORE=y
+
+CONFIGWATCHDOGNOWAYOUT is not set
+
+CONFIGWATCHDOGHANDLEBOOTENABLED=y
+
+CONFIGWATCHDOGSYSFS is not set
+
+#
+
+Watchdog Device Drivers
+
+#
+
+CONFIGSOFTWATCHDOG is not set
+
+CONFIGGPIOWATCHDOG is not set
+
+CONFIGXILINXWATCHDOG is not set
+
+CONFIGZIIRAVEWATCHDOG is not set
+
+CONFIGARMSP805_WATCHDOG is not set
+
+CONFIGARMSBSA_WATCHDOG is not set
+
+CONFIGCADENCEWATCHDOG is not set
+
+CONFIGDWWATCHDOG is not set
+
+CONFIGMAX63XXWATCHDOG is not set
+
+CONFIGHOBOTWATCHDOG=y
+CONFIGHOBOTWATCHDOG_ENABLE=y/打开这个选项系统会自动喂狗/
+
+CONFIGHOBOTWATCHDOG_TEST is not set
+
+CONFIGMENA21_WDT is not set
+
+
+
+使用示例
+
+
+
+include 
+
+include 
+
+include  //UNIX标准函数定义
+
+include 
+
+include 
+
+include   //文件控制定义
+
+include     //PPSIX终端控制定义
+
+include   //错误号定义
+
+include 
+
+include 
+
+include 
+
+include 
+
+int watchdogfd;
+int feeddog = 1;
+
+void* feeddogthread()
+{
+    int feeddogvalue;
+    int returnval;
+
+feeddogvalue = 65535;
+
+while (feeddog) {
+    //每隔10秒，将重载看门狗计数寄存器的值
+    printf("feed dog\n");
+    returnval = write(watchdogfd, &amp;feeddogvalue, sizeof(int));
+    sleep(10);
+}
+
+
+}
+
+int main()
+{
+    pthread_t watchdogThd;
+    //int watchdogfd;
+    int returnval;
+    char readline[32], *p;
+
+//打开看门狗设备
+if ((watchdogfd = open("/dev/watchdog", O_RDWR|O_NONBLOCK)) &lt; 0) {
+    printf("cannot open the watchdog device\n");
+    exit(0);
+}
+
+int timeout = 15;
+int timeleft;
+ioctl(watchdogfd, WDIOC_SETTIMEOUT, &amp;timeout);
+printf("The timeout was set to %d seconds\n", timeout);
+
+//创建喂狗线程
+returnval = pthread_create(&amp;watchdogThd, NULL, feeddogthread, NULL);
+if (returnval &lt; 0)
+    printf("cannot create feeddog thread\n");
+
+while (1) {
+    printf("Command (e quit): ");
+    memset(readline, '\0', sizeof(readline));
+    fgets(readline, sizeof(readline), stdin);
+
+    /* 去字符串前部空字符 */
+    p = readline;
+    while(*p == ' ' || *p == '\t')
+            p++;
+
+    switch(*p) {
+    case 'g':
+        ioctl(watchdogfd, WDIOC_GETTIMEOUT, &amp;timeout);
+        printf("The timeout was is %d seconds\n", timeout);
+        break;
+    case 'e':
+        printf("Close watchdog an exit safety!\n");
+        //write(watchdogfd, "V", 1);
+        int disable_dog = WDIOS_DISABLECARD;
+        ioctl(watchdogfd, WDIOC_SETOPTIONS, &amp;disable_dog);
+        close(watchdogfd);
+        break;
+    case 's':
+        printf("stop feed dog\n");
+        feeddog = 0;
+        break;
+    case 't':
+        ioctl(watchdogfd, WDIOC_GETTIMELEFT, &amp;timeleft);
+        printf("The timeout was is %d seconds\n", timeleft);
+        break;
+    case 'r': 
+        printf("we don't close watchdog. The machine will reboot in a few seconds!\n");
+        printf("wait......\n");
+        break;
+    default:
+        printf("get error char: %c\n", *p);
+    }
+
+}
+
+return 0;
+
+
+}
+

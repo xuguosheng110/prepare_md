@@ -1,0 +1,23 @@
+
+10.3 多媒体类
+
+视频编\解码
+
+【问题】 
+
+
+开发板解码rtsp视频流报错，错误如下：
+
+
+
+【解答】 
+
+
+推流服务器推送的rtsp码流里面需要包含PPS和SPS参数信息
+使用ffmpeg打开.mp4 .avi等格式的视频文件推流时，需要添加-vbsf h264_mp4toannexb选项，以添加码流的PPS 和SPS信息，例如：
+
+
+ffmpeg -re -stream_loop -1 -i xxx.mp4 -vcodec copy -vbsf h264_mp4toannexb -f rtsp rtsp://192.168.1.195:8554/h264_stream
+
+rtsp视频流目前仅支持1080p分辨率
+不支持使用vlc软件进行rtsp推流，原因是vlc软件不支持添加PPS和SPS信息
