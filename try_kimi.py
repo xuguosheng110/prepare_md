@@ -2,7 +2,7 @@ from openai import OpenAI
 from pathlib import Path
 
 client = OpenAI(
-    api_key="sk-YTNC6nKnopVQKt4fXBp4k4gX0GODOo0puTU3v77ie2dzzNup",
+    api_key="",
     base_url="https://api.moonshot.cn/v1",
 )
  
